@@ -659,7 +659,7 @@ sys.argv # 获取python程序执行参数
 
 sys.stderr.write('error message')
 sys.exit(1)
-# 上下两种方式作用一样。输入错误并退出程序
+# 上下两种方式作用一样。提示输入错误并退出程序
 raise SystemExit('error message')
 ```
 
@@ -687,7 +687,7 @@ f(0) # {'y': 0, 'a': 0, 'c': 2, 'b': 1}
 
 函数的参数，是传递对象的引用。若对象可修改，修改对外部内部都可见。
 
-位置参数，从左到右传入。
+位置参数，从左到右传入
 
 关键字参数：通过参数名匹配
 
@@ -840,14 +840,13 @@ Python对延迟提供了更多的支持——它提供了工具在需要的时�
   [x ** 2 for x in range(4)] # [0, 1, 4, 9]
   (x ** 2 for x in range(4)) # <generator object <genexpr>
   list(x ** 2 for x in range(4)) # [0, 1, 4, 9]
-
   ```
 
 生成器和常规函数是一样的，并且，实际上也是用常规的def语句编写，差别在于，创建生成器的时候，会自动实现迭代器协议，以便应用到迭代背景中（如for循环）
 
 状态挂起：生成器函数和常规函数之间的主要代码不同之处在于，生成器yield一个值，而不是返回一个值。yield语句挂起该函数并再向调用者返回一个值，但是，**保留足够的状态以便之后从它离开的地方继续**
 
-实践：用生成器改写直接返回列表的函数
+举例：用生成器改写直接返回列表的函数
 
 ```python
 # 使用列表的方式
@@ -879,10 +878,91 @@ print list(index_words('How old are you')) # [0, 4, 8, 12]
 
 
 
-
-
 ## 函数最佳实践
 
+用生成器改写数据量较大的列表推导
+
+```python
+value = [len(x) for x in open('/tmp/my_file.txt')]
+print value
+
+it = (len(x) for x in open('/tmp/my_file.txt'))
+# <generator object <genexpr>
+print next(it)
+print next(it)
+
+# 1. 当输入的数据量较大时，列表推导可能会因为占用太多内存而出现问题
+# 2. 由生成器表达式所返回的迭代器，可以逐次产生输出值，从而避免了内存用量问题
+```
+
+需要清楚生成器的副作用——生成器只能迭代一次。若代码某一处对生成器对象进行了迭代访问，之后该对象将为空，不再可用。
+
+用异常表示特殊情况，不要返回`None`
+
+用数量可变的位置参数减少视觉杂讯。不过如果以后要增加新的位置参数，那就必须修改所有调用该函数的代码，扩展性不好。所以，数量可变的位置参数也要慎用
+
+```python
+# 使用元组
+def log(message, values):
+    pass
+log('My number are', [1, 2])
+log('Hi, there', [])
+
+# 使用数量可变的位置参数
+def log(message, *values):
+    pass
+log('My number are', 1, 2)
+log('Hi, there')
+favorites = [7, 33, 99]
+log('Favorite colors', *favorites)
+
+# 令函数接受可选的位置参数，能够使代码更加清晰。对于这里的第一个例子，即便没有需要打印的值，只是打印一条消息，也必须传入一个空的列表，这种写法既麻烦又显得杂乱，最好能让调用者在不必要时把第二个参数完全省略掉
+```
+
+用关键字参数来表达可选的行为
+
+1. 以关键字参数来调用函数，能使读到这行代码的人更容易理解其含义
+
+2. 可以在函数定义中提供默认值
+
+3. 便于扩展
+
+   ```python
+   def remainder(number, divisor):
+       return number % divisor
+
+   print remainder(20, 7)
+   print remainder(number=20, divisor=7)
+   print remainder(number=20, 7) # ❌ 位置参数必须出现在关键字参数之前
+   print remainder(20, number=7) # ❌ 每个参数只能指定一次
+   ```
+
+用None赋值给动态默认值
+
+1. 参数的默认值，只会在程序加载模块并读到本函数的定义时评估一次，对于{}或[]等动态的值，这可能会导致奇怪的现象
+
+2. 对于以动态值作为实际默认值的关键字参数来说，应该把形式上的默认值写为None，并提供文档
+
+   ```python
+   def grow(A, B=[]):
+       B.append(A)
+       return B
+   grow(1) # [1]
+   grow(1) # [1, 1]
+   grow(1) # [1, 1, 1]
+   ```
+
+
+
+## 练手
+
+熟悉`ConfigParser` 模块和`argparse`模块，通过配置文件和命令行参数，指定连接数据库的参数
+
+Scrabble challenge
+
+练习老师课堂上的案例，自动配置config文件
+
+实现一个拼写检查器spelling corrector
 
 
 
