@@ -1,5 +1,7 @@
 # 第一周
 
+To be continued
+
 
 
 # 内置数据类型
@@ -156,6 +158,22 @@ sys.getrefcount(a)
 with open("/etc/passwd", "rt") as myfile:
     for line in myfile:
         # process line
+
+# with也可以打开多个文件，这里的source和target为演示用，实际上需要先赋值。
+with open(source) as s, open(target, 'w') as t:
+    t.write(s.read())
+        
+def get_conn(**kwargs):
+    return pymysql.connect(host=kwargs.get('host', '127.0.0.1'),
+                          user=kwargs.get('user'),
+                          passwd=kwargs.get('password'),
+                          port=kwargs.get('port', 3306))
+conn = get_conn(user='', password='')
+with conn as cur:
+    sql = ''
+    cur.execute(sql)
+    rows = cur.fetchall()
+    print rows
 ```
 
 写一个不存在的文件，使用x模式。文件不存在顺利写入，文件存在则抛出异常`FileExistError`
@@ -878,6 +896,273 @@ print list(index_words('How old are you')) # [0, 4, 8, 12]
 
 
 
+
+## 装饰器
+
+Python2.4开始提供了装饰器（decorator），装饰器作为**修改函数**的一种便捷方式，为程序员编写程序提供了便利性和灵活性。
+
+**装饰器本质上就是一个函数，这个函数接收其他函数作为参数，并将其以一个新的修改后的函数进行替换。**
+
+```python
+# 函数嵌套
+def outer(x, y):
+    def inner():
+        return x ** y
+    return inner
+x = outer(2, 4)
+x() # 16
+
+# 装饰器
+def sandwich(food="--ham--"):
+    print food
+
+def bread(other_func):
+    def wrapper():
+        print "</''''''\>"
+        func()
+        print "</______\>"
+    return wrapper
+    
+sandwich_copy = bread(sandwich)
+sandwich_copy()
+"""
+</''''''\>
+--ham--
+</______\>
+"""
+
+# 语法糖写法
+def bread(func):
+    def wrapper():
+        print "</''''''\>"
+        func()
+        print "</______\>"
+    return wrapper
+
+@bread # 此语法糖的效果等同于第二个例子中最后两行代码
+def sandwich(food="--ham--"):
+    print food
+
+sandwich()
+"""
+</''''''\>
+--ham--
+</______\>
+"""
+```
+
+综上的例子可见，装饰器涉及到了如下的知识点：
+
+- 函数嵌套
+- 函数就是对象（函数对象），可以随意传递
+- 语法糖：语言自身提供，用更加简便的方式表示某种行为
+
+装饰器具体实例：检查参数，将检查功能与业务逻辑拆分
+
+```python
+# 一般写法
+class Store(object):
+    def get_food(self, username, food):
+        if username != 'admin':
+            raise Exception("This user is not allowed to get food")
+        return self.storage.get(food)
+    
+    def put_food(self, username, food):
+        if username != 'admin':
+            raise Exception("This user is not allowed to get food")
+        return self.storage.put(food)
+    
+# DRY写法
+def check_is_admin(username):
+    if username != 'admin':
+        raise Exception("This user is not allowed to get food")
+        
+class Store(object):
+    def get_food(self, username, food):
+        check_is_admin(username)
+        return self.storage.get(food)
+    
+    def put_food(self, username, food):
+        check_is_admin(username)
+        return self.storage.put(food)
+    
+# 装饰器语法糖写法
+def check_is_admin(f):
+    def wrapper(*args, **kwargs):
+        if kwargs.get('username') != 'admin':
+            raise Exception("This user is not allowed to get food")
+        return f(*args, **kwargs)
+    return wrapper
+
+class Store(object):
+    @check_is_admin
+    def get_food(self, username, food):
+        return self.storage.get(food)
+    
+    @check_is_admin
+    def put_food(self, username, food):
+        return self.storage.put(food)
+```
+
+装饰器的使用场景：
+
+- 注入参数（提供默认参数，生成参数）
+- 记录函数行为（日志、缓存、计时之类）
+- 预处理/后处理（配置为上下文之类）
+- 修改调用时的上下文（线程异步或者并行，类方法）
+
+  ```python
+  # Python官方示例
+  # benchmark
+  import time
+  def benchmark(func):
+      def wrapper(*args, **kwargs):
+          t = time.clock()
+          res = func(*args, **kwargs)
+          print func.__name__,
+          time.clock() -t
+          return res
+      return wrapper
+
+  # logging
+  def logging(func):
+      def wrapper(*args, **kwargs):
+          res = func(*args, **kwargs)
+          print func.__name__, args, kwargs
+          return res
+      return wrapper
+
+  # counter
+  def counter(func):
+      def wrapper(*args, **kwargs):
+          wrapper.count = wrapper.count + 1
+          res = func(*args, **kwargs)
+          print "{0} has been used:{1}x".format(func.__name__, wrapper.count)
+          return res
+      wrapper.count = 0
+      return wrapper
+
+  @counter
+  @benchmark
+  @logging
+  def reverse_string(string):
+      return str(reversed(string))
+  ```
+
+装饰器的注意事项：
+
+- 函数属性变化
+  ```python
+  def is_admin(f):
+      def wrapper(*args, **kwargs):
+          if kwargs.get("username") != 'admin':
+              raise Exception("This user is not allowed to get food")
+          return f(*args, **kwargs)
+      return wrapper
+
+  def foobar(username='someone'):
+      """Do crazy stuff"""
+      pass
+
+  @is_admin
+  def barfoo(username='someone'):
+      """Do crazy stuff"""
+      pass
+
+  print foobar.__doc__ # Do crazy stuff
+  print foobar.__name__ # foobar
+  print barfoo.__doc__ # None
+  print barfoo.__name__ # wrapper
+  # 因为被装饰器修改，所以barfoo的函数属性有了变化。如果需要在使用装饰起i时，仍要获取原函数的相关属性，可以使用标准库import functools，并在def wrapper前@functools.wraps(func)
+  ```
+
+- 使用inspect获取函数参数
+  ```python
+  # 前面check_is_admin例子中装饰器使用kwargs.get获取username的参数。但实际上，对username传参即可以以位置方式传参，也可以以字典的方式传参。所以前面的例子有报错的可能。恰好python提供了标准库inspect，可以将装饰器所有获取到的参数转化为字典形式，再获取参数
+  import functools
+  import inspect
+  def check_is_admin(f):
+      @functools.wraps(f)
+      def wrapper(*args, **kwargs):
+          func_args = inspect.getcallargs(f, *args, **kwargs)
+          if func_args.get('username') != 'admin':
+              raise Exception("This user is not allowed to get food")
+          return f(*args, **kwargs)
+      return wrapper
+
+  @check_is_admin
+  def get_food(username, food="chocolate"):
+      return "{0} get food: {1}".format(username, food)
+  print get_food('admin') # admin get food: chocolate
+  print get_food(username='admin') # admin get food: chocolate
+  ```
+
+- 多个装饰器的调用顺序
+
+  ```python
+  def makebold(fn):
+      def wrapper():
+          return "<b>" + fn() + "</b>"
+      return wrapper
+  def makeitalic(fn):
+      def wrapper():
+          return "<i>" + fn() + "</i>"
+      return wrapper
+
+  @makebold
+  @makeitalic
+  def hello():
+      return "hello world"
+  print hello() # <b><i>hello world</i></b>
+  # 即相当于hello-copy = makebold(makeitalic(hello))。越靠近函数的地方越优先执行
+  ```
+
+- 给装饰器传递参数
+
+  ```python
+  """
+  内层函数的参数是被装饰的函数的参数
+  外层函数的参数是被装饰的函数
+  如果需要给装饰器传递参数，则再加一层嵌套
+  """
+  import functools
+
+  def timeout(seconds, error_message = 'Function call timed out'):
+      def decorated(func):
+          def _handle_timeout(signum, frame):
+              raise TimeoutError(error_message)
+          
+          def wrapper(*args,  **kwargs):
+              signal.signal(signal.SIGALRM, _handle_timeout)
+              signal.alarm(seconds)
+              try:
+                  result = func(*args, **kwargs)
+              finally:
+                  signal.alarm(0)
+              return result
+          return functools.wraps(func)(wrapper)
+      return decorated
+
+  import time
+  @timeout(1, 'Function slow: aborted')
+  def slow_function():
+      time.sleep(5)
+  ```
+
+
+装饰器的缺点：
+
+- 装饰器新增于2.4版本，无法兼容之前的版本
+- 装饰器经过封装，可能降低程序执行效率，但不明显
+- cannot un-decorate a function
+- 可能带来调试难度
+
+更多Python装饰器资料可见：
+
+[PythonDecoratorLibrary](https://wiki.python.org/moin/PythonDecoratorLibrary)
+
+
+
 ## 函数最佳实践
 
 用生成器改写数据量较大的列表推导
@@ -954,20 +1239,41 @@ log('Favorite colors', *favorites)
 
 
 
+
 ## 练手
 
-熟悉`ConfigParser` 模块和`argparse`模块，通过配置文件和命令行参数，指定连接数据库的参数
+1. 熟悉`ConfigParser` 模块和`argparse`模块，通过配置文件和命令行参数，指定连接数据库的参数
 
-Scrabble challenge
+2. Scrabble challenge
 
-练习老师课堂上的案例，自动配置config文件
+3. 练习老师课堂上的案例，自动配置config文件
 
-实现一个拼写检查器spelling corrector
+4. 实现一个拼写检查器spelling corrector
 
 
 
 
 # 模块
+
+## 模块的宏伟蓝图
+
+
+
+
+
+## 模块代码编写基础
+
+
+
+
+
+## 模块包
+
+
+
+
+
+## 高级模块话题 
 
 
 
@@ -987,13 +1293,13 @@ Scrabble challenge
 
 # 实战
 
-
+To be continued
 
 
 
 # 爬虫
 
-
+To be continued
 
 
 
@@ -1010,3 +1316,5 @@ Scrabble challenge
 
 
 # 自动化运维
+
+To be continued
