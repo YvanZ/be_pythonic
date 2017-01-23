@@ -373,7 +373,13 @@ bob[0] # Bob
 ```python
 # 实战代码，获取磁盘健康信息
 
-DiskDevice = collections.namedtuple('DiskDevice', 'major_number minor_number device_name read_count read_merged_count read_sections time_spent_reading write_count write_merged_count write_sections time_spent_write io_requests time_spent_doing_io weighted_time_spent_doing_io')
+DiskDevice = collections.namedtuple('DiskDevice', 'major_number\ minor_number device_name \
+read_count read_merged_count \
+read_sections time_spent_reading \
+write_count write_merged_count \
+write_sections time_spent_write \
+io_requests time_spent_doing_io \
+weighted_time_spent_doing_io')
 
 with open("/proc/diskstats") as f:
     for line in f:
@@ -1257,23 +1263,174 @@ log('Favorite colors', *favorites)
 
 ## 模块的宏伟蓝图
 
+为什么使用模块——代码重用、系统命名空间的划分、实现共享服务和数据
 
+Python程序架构
+
+- 启动的那个Python文件称之为顶层文件
+- 模块文件就是工具的库，我们导入模块，获取它的属性并使用它的工具
+
+`import`如何工作
+
+- 导入是运行时的运算，程序第一次导入，会执行一下三步：
+  1. 找到模块文件
+  2. 编译成字节码（pyc文件）
+  3. 执行模块的代码来创建其所定义的对象
+- Python把载入的模块存储到一个名为`sys.modules`的表中，并在一次导入操作的开始检查该表，如果模块不存在，将会启动一个三个的过程来载入模块。
+  1. 搜索
+  2. 编译
+  3. 运行
+
+模块搜索路径
+
+1. 程序的主目录
+2. `PYTHONPATH`目录（环境变量）
+3. 标准链接库目录
+4. 任何`.pth`文件的内容
 
 
 
 ## 模块代码编写基础
 
+模块的创建
 
+- 定义一个Python文件，编写代码，就是一个Python模块
+- 模块在Python中会变成变量（一个变量对象），因此，需要遵循普通变量名命名规则
+
+模块的使用
+
+- `import`语句
+
+- `from`语句
+
+- `from *`语句
+  ```python
+  import module1 # get module
+  from module1 import printer # get an export
+  from module1 import * # get all exports
+  ```
+
+- 导入只发生一次
+
+- `import`和`from`是赋值语句
+
+  - `import`将整个模块对象赋值给一个变量
+  - `from`将一个或多个变量名赋值给另一个模块中的同名对象（函数参数传递），修改不可变对象不起作用，修改可变对象可能有副作用
+
+- 文件间的变量名改变
+  ```python
+  import small
+  small.x = 42 # 这里small中x的值会被修改成42
+
+  from small import x, y
+  x = 42 # 这里只是赋值给另一个同名对象，所以不会修改small中的x
+  ```
+
+
+`from`语句陷阱
+
+- 多个模块具有同名函数或变量
+- 导入模块和当前模块有同名函数或变量
+
+模块命名空间
+
+- 模块就是命名空间，而存在于模块之内的变量名，就是模块对象的属性
+  - 模块语句会在首次导入时执行
+  - 顶层的赋值语句（不存在与`def`或`class`语句内）会创建模块属性，赋值的变量名会存在模块的命名空间内
+  - 模块的命名空间能通过`__dict__`或`dir`查看属性
+  - 模块是一个独立的作用域（本地变量就是全局变量）
+- 作用域：模块程序代码绝对无法看见其他模块内的变量名，除非明确地进行导入
+- 命名空间嵌套：命名空间不会向上嵌套，但是可以发生向下嵌套
 
 
 
 ## 模块包
 
+除了模块名以外，导入也可以指定目录路径。Python代码的目录就称为包，因此，这类导入就称为包导入
+
+包导入是把计算机上的目录变成另外一个Python命名空间，而属性就是子目录或目录下的模块文件
+
+```python
+# 如果我们要在dir0目录下进行包导入，则
+import dir1.dir2.mod
+"""
+dir0必须包含在sys.path
+dir1和dir2文件夹中，都必须包含__init__.py文件
+dir0不需要__init__.py文件
+"""
+```
+
+为什么需要包导入：包让导入更具有信息性
+
+包相对导入
+
+- 相对导入只适用于包内导入
+
+- 相对导入只适用于`from`语句
+
+  ```python
+  from system.section.mypkg import string
+  from . import string
+  ```
+
+- 相对导入中的“.”用来表示包含文件的包目录
+
+- 相对导入中的“..”用来表示当前包的父目录
+
+  ```python
+  # 例：位于模块A.B.C中的代码要进行导入
+  from . import D # imports A.B.D(. means A.B):导入整个D
+  from .. import E # import A.E(.. means A):导入整个E
+
+  from .D import X # imports A.B.D.X(. means A.B):导入D中的X
+  from ..E import X # imports A.E.X(.. means A.E):导入E中的X
+  ```
 
 
 
 
 ## 高级模块话题 
+
+在模块中隐藏数据，最小化`from *`的破坏
+1. 把下划线放在变量名前面，例如`_X`，可以防止客户端使用`from  *`语句导入模块名时，把其中的那些变量名复制出去
+2. 模块顶层把变量名的字符串列表赋值给变量`__all__`，可以达到`_X`命名管理的隐藏效果。具体可参考`/usr/lib64/python2.7/os.py`
+
+启用以后的特性，可能破坏现有代码语言方面的变动会不断引入。一开始，是以扩展的方式出现，默认是关闭的，可以启用这类扩展：例如`from __future__ import “featurename”`
+
+`__name__`和`__main__`
+
+- 每一个模块都有一个名为`__name__`的属性，Python会自动设置该属性
+  - 如果文件是以顶层程序文件执行，在启动时，`__name__`就会自动设置为字符串`__main__`
+  - 如果文件被导入，`__name__`就会设置为模块名
+- 模块可以自己检测`__name__`，以确定自己是在被执行还是被导入。这样可以在写模块时，定义`__main__`完成自测模块功能。
+
+修改模块搜索路径
+
+- 模块搜索路径是一个目录列表，可以通过环境变量`PYTHONPATH`进行定制
+
+- Python本身也可以通过修改`sys.path`增加搜索目录
+
+  ```python
+  import sys
+  import os
+  print sys.path # ['', '/usr/bin', '/usr/lib/python2.7...
+  os.path.realpath('.')
+  sys.path.append(os.path.realpath('.'))
+  ```
+
+`as`扩展：`import`语句和`from`语句都可以扩展，让模块可以在脚本中给予不同的变量名
+
+```python
+from modulename import name
+import modulename as name
+
+try:
+    import MySQLdb as db
+except ImportError:
+    import pymysql as db
+```
+
+模块是对象，可以通过`__dict__`暴露自己的属性。也可以写程序，来管理这些属性，一般称这样的程序为metaprogram（元编程）。因为我们写的程序，能够在其他程序之上工作，所以，也叫作内省（introspection）
 
 
 
