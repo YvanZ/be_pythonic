@@ -1432,7 +1432,98 @@ except ImportError:
 
 模块是对象，可以通过`__dict__`暴露自己的属性。也可以写程序，来管理这些属性，一般称这样的程序为metaprogram（元编程）。因为我们写的程序，能够在其他程序之上工作，所以，也叫作内省（introspection）
 
+```python
+# 假设模块内有名为name的属性
+M.name
+M.__dict__['name']
+sys.modules['M'].name
+getattr(M, 'name')
+```
 
+模块设计理念：
+
+- 总是在Python的模块内编写代码
+- 模块耦合要降低到最低：全局变量
+- 最大化模块的粘和性：统一目标
+- 模块不应该去修改其他模块的变量
+
+模块陷阱：顶层代码的语句次序很重要
+
+- 当模块首次导入时，Python会从头到尾执行语句：
+  - 在导入时，模块文件顶层的程序文件（不在函数内），一旦Python运行至此，就会立刻执行。因此，该语句无法引用该位置后面的变量和函数
+  - 位于函数主体内的代码直到函数被调用后才会运行，因为函数内的变量名在函数实际执行前都不会解析，通常可以引用文件内任意地方的变量
+
+`from`复制变量名，而不是连接
+
+```python
+# nested1.py
+X = 99
+def printer():
+    print X
+    
+# nested2.py
+from nested1 import X, printer
+X = 88
+printer() # 99
+
+# nested3.py
+import nested1
+nested1.X = 88
+nseted1.printer() # 88 但是并不推荐这样的方式，因为这种情况修改了模块nested1的变量
+```
+
+`from *`会让变量语意模糊
+
+- `from *`可能会意外的覆盖了作用域内已使用的变量名
+- 如果有多个`from *`，且有同名的对象（变量、函数、类），你在使用的时候，很难确定对象来自哪里
+- 要避免这个问题的方法，即不要这么做
+
+递归形式的`from`导入无法工作
+
+```python
+# recur1.py
+X = 1
+import recur2
+Y = 2
+
+# recur2.py
+from recur1 import X
+from recur1 import Y
+# 变量名Y是在导入recur1以后才赋值的，这时候import Y，Y还不存在
+```
+
+
+
+## 补充一些开源库
+
+系统管理库`psutil`
+
+- `cpu_percent`返回当前cpu利用率百分比
+- `cpu_count`获取逻辑或物理cpu的个数
+- `virtual_memory`内存占用情况
+- `disk_partitions`硬盘分区信息
+- `disk_usage`分区或目录的使用情况
+- `pids`当前运行的进行列表
+- `pid_exists`检查进程是否存在
+- `Process(memory_info cmdline kill)`管理进程
+
+邮件发送库`yagmail` [Github地址](https://github.com/kootenpv/yagmail)
+
+```python
+import yagmail
+yag = yagmail.SMTP()
+contents = ['This is the body, and here is just text http://somedomain/image.png',
+            'You can find an audio file attached.', '/local/path/song.mp3']
+yag.send('to@someone.com', 'subject', contents)
+```
+
+
+
+## 练手
+
+获取系统信息，发邮件
+
+写一个装饰器，能够记录函数开始运行和结束运行，再修改该装饰器，传递一个参数给装饰器，表明是谁调用了这个函数
 
 
 
