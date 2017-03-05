@@ -1529,6 +1529,60 @@ yag.send('to@someone.com', 'subject', contents)
 
 # 类
 
+## 类的概念
+
+OOP(Object Oriented Programming)即面向对象编程，可以分解代码，把代码的冗余度降至最低。并且，可以通过定制现有的代码来编写新的程序，而不是原处修改
+
+类就是一些函数的包，这些函数大量使用并处理内置对象
+
+在Python中，OOP完全是可选的，并且在初期学习阶段，不需要使用类
+
+合理使用类，能够大量减少开发时间
+
+Python中的类，包含三部分知识：
+
+1. 类的概念
+2. 类的语句
+3. 运算符重载
+
+
+
+
+
+
+
+## 类代码编写基础
+
+
+
+
+
+## 实例
+
+
+
+
+
+## 深入细节
+
+
+
+
+
+
+
+## 运算符重载
+
+
+
+
+
+## 高级主题
+
+
+
+
+
 
 
 
@@ -1552,6 +1606,631 @@ To be continued
 
 
 # Flask入门
+
+## Flask基本介绍
+
+我们先来看一下`Flask`官方提供的Demo
+
+```python
+from flask import Flask
+app = Flask(__name__)   # 导入Flask类，这个类的实例将会是我们的WSGI应用程序
+						# 接下来，我们创建一个该类的实例，第一个参数是应用						  模块或者包的名称
+@app.route('/')			# 我们使用route()装饰器告诉Flask，什么样的URL触						发我们的函数，这个函数的名字也在生成URL时被特定的						  函数采用，这个函数返回我们想要显示在用户浏览器中的						   信息
+def hello_world():
+    return 'Hello World!'
+
+if __name__ == '__main__': # 最后使用run()函数让应用运行在本地服务器
+    app.run()
+```
+
+基于上面的代码，可以试图追溯，Flask是如何工作的。而在这之前，我们需要知道以下几个概念：
+
+- `WSGI`是什么
+  - Python Web服务器网关接口，为Python语言定义的Web服务器和Web应用程序或框架之间的一种简单而通用的接口
+  - 在`WSGI`出现之前，Web应用框架的选择将限制可用的Web服务器的选择，反之亦然：`WSGI`统一了Web服务器和Web框架之间的约定
+  - 也就是说，在Python的世界里，通过`WSGI`约定了Web服务器怎么调用Web应用程序的代码，Web应用程序需要符合什么样的规范，只要Web应用程序和Web服务器都遵守`WSGI`协议。那么，Web应用程序和Web服务器就可以随意的组合，这就是`WSGI`存在的理由。
+  - `WSGI`为Web服务器与Web应用程序或应用框架之间的一种低级别借口，直接使用低级别的接口，会使编程难度陡增，也不易于维护。遂出现了众多Web框架。
+  - 注：`WSGI`是一种协议，另有`uwsgi`也是一种协议。而`uWSGI`则是实现了`uwsgi`和`WSGI`两种协议的Web服务器
+- `Jinja2`是什么
+  - `Jinja2`是一个功能齐全的模板引擎，可以将业务逻辑和表现逻辑分离
+- `Werkzeug`是什么
+  - `Werkzeug`是一个`WSGI`工具包，它可以作为Web框架的底层库。
+  - 如果我们自己写Python框架，也可以单独使用`Werkzeug`
+- `Flask`是什么
+  - `Flask`是一个依赖`Jinja2`模板和`Werkzeug`的`WSGI`服务的Web框架
+  - `Werkzeug`只是工具包，其用于接受`http`请求并对请求进行预处理，然后出发`Flask`框架
+  - 开发人员基于`Flask`框架提供的功能对请求进行相应的处理，并返回给用户
+  - 如果要返回给用户的内容比较复杂，需要借助`Jinja2`模板来实现对模板的处理。将模板和数据进行渲染，将渲染后的字符串返回给用户浏览器
+
+
+
+
+路由和视图:
+
+```python
+from flask import Flask
+app = Flask(__name__)
+
+@app.route('/')
+def hello_world():
+    return 'Hello World!'
+
+if __name__ == '__main__':
+    app.run()
+```
+
+客户端（例如Web浏览器）把请求发送给Web服务器，Web服务器再把请求发送给Flask程序实例。程序实例需要知道对每个URL请求运行哪些代码，所以保存了一个URL到Python函数的映射关系。处理URL和函数之间关系的程序称为**路由**。
+
+在Flask程序中定义路由最简便的方式，是使用程序实例提供的`app.route`装饰器，把修饰的函数注册为路由。
+
+像`hello_world()`这样的函数称为视图函数（view function）。视图函数返回的响应可以是包含HTML的简单字符串，也可以是复杂的表或`JSON`串。
+
+
+
+调试模式:
+
+`Flask`开发过程中，可以打开调试模式。即在`app.run`函数里增加参数`debug=True`。如此可以在修改代码时，自动reload代码。
+
+
+
+配置文件管理:
+
+- 复杂的项目需要配置各种环境，如果配置项比较少，可以直接在代码中硬编码
+
+  ```python
+  from flask import Flask
+  app = Flask(__name__)
+  app.confg['DEBUG'] = True
+  ```
+
+- `app.config`是`flask.config.Config`类的实例，继承自Python内置数据结构`dict`。所以，可以像字典一样使用
+
+  ```python
+  app.config.update(DEBUG=True, SECRET_KEY='...')
+  ```
+
+- 如果配置项很多，应该使用配置文件
+
+- 常用有如下三种方式加载配置文件
+
+  - 通过模块加载
+
+    ```python
+    import settings
+    app.config.from_object(settings)
+    ```
+
+  - 通过文件名字加载
+
+    ```python
+    app.config.from_pyfile('settings.py', slient=True)
+    ```
+
+  - 通过环境变量加载
+
+    ```shell
+    > export YOURAPPLICATION_SETTINGS='settings.py'
+    ```
+
+    ```python
+    app.config.from_server('SETTINGS')
+    ```
+
+
+
+
+动态URL:
+
+要给URL添加变量部分，妳可以把这些特殊的字段标记为\<variable_name>，这个部分将会作为命名参数传递到你的函数。还可以用\<converter:variable_name>指定一个可选的转换器
+
+```python
+@app.route('/user/<username>')
+def show_user_profile(username):
+    return 'User %s' % username
+
+@app.route('/post/<int:post_id>')
+def show_post(post_id):
+    return 'Post %d' % post_id
+```
+
+
+
+唯一URL:
+
+`Flask`的URL规则基于`Werkzeug`的路由模块。这个模块背后的思想时基于`Apache`以及更早的`HTTP`服务器主张的先例，保证优雅且唯一的URL
+
+```python
+@app.route('/projects/')
+def projects():
+    return 'The project page'
+
+@app.route('/about')
+def about():
+    return 'The about page'
+```
+
+虽然它们看起来着实相似，但它们结尾斜线的使用在URL定义中不同。第一种情况下，指向projects的规范URL尾端有一个斜线。这种感觉很像在文件系统中的文件夹。访问一个结尾不带斜线的URL会被`Flask`重定向到带斜线的规范URL去
+
+第二种情况的URL结尾不带斜线，类似`UNIX-like`系统下的文件的路径名。访问结尾带斜线的URL会产生一个`404 Not Found`错误
+
+这个行为使得在遗忘尾斜线时，允许关联的URL接任工作，与`Apache`和其他的服务器行为并无二异。此外，也保证了URL的唯一，有助于避免搜索引擎索引同一个页面两次
+
+
+
+生成URL:
+
+你可以用`url_for()`来给指定的函数构造URL。它接受函数名作为第一个参数，也接受对应URL规则的变量部分的命名参数。未知变量部分会添加到URL末尾作为查询参数
+
+反向构建通常比硬编码的描述性更好。更重要的是，它允许你一次性修改URL，而不是到处边找边改
+
+URL构建会转义特殊字符和`Unicode`数据，免去你很多麻烦
+
+如果你的应用不位于URL的根路径（比如，在/myapplication下，而不是/），`url_for()`会妥善处理这个问题
+
+```python
+from flask import Flask, url_for
+app = Flask(__name__)
+
+@app.route('/')
+def index(): pass
+
+@app.route('/login')
+def login(): pass
+
+@app.route('/user/<username>')
+def profile(): pass
+
+with app.test_request_context():
+	print url_for('index')	# /
+    print url_for('login')	# /login
+	print url_for('login', next='/')	# /login?next=%2F
+	print url_for('profile', username="John Doe")	# /user/John%20Doe
+```
+
+
+
+HTTP方法:
+
+默认情况下，路由只回应`GET`请求，但是通过`route()`装饰器传递`methods`参数可以改变这个行为
+
+如果存在`GET`，那么也会替你自动地添加`HEAD`，无需干预
+
+```python
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        do_the_login()
+    else:
+        show_the_login_form()
+```
+
+
+
+静态文件:
+
+动态Web应用也会需要静态文件，通常是`CSS`和`JavaScript`文件。理想状况下，你已经配置好Web服务器来提供静态文件，但是在开发中，Flask也可以做到。只要在你的包中或是模块的所在目录创建一个名为`static`的文件夹，在应用中使用`/static`即可访问
+
+给静态文件生成URL，使用特殊的`'static'`端点名
+
+```python
+url_for('static', filename='style.css')
+```
+
+
+
+模版渲染:
+
+`Flask`继承了`Jinja2`来渲染HTML
+
+```python
+from flask import render_template  # Flask使用render_template集成Jinja2
+
+@app.route('/hello/')
+@app.route('/hello/<name>')
+def hello(name=None):
+    return render_template('hello.html', name=name)
+```
+
+
+
+访问请求数据:
+
+对于Web应用，与“客户端发送给服务器的数据”交互至关重要。在Flask中由全局的`request`对象来提供这些信息
+
+你可以通过args属性来访问URL中提交的参数(?key=value)
+
+```python
+from flask import Flask, request
+app = Flask(__name__)
+
+@app.route('/')
+def hello():
+    searchword = request.args.get('key', '')
+```
+
+
+
+Flask的上下文:
+
+为了避免大量可有可无的参数把视图函数弄得一团糟，Flask使用上下文临时把某些对象变为全局可访问。有了上下文，就可以写出厦门的视图函数
+
+```python
+from flask import request
+@app.route('/')
+def index():
+    user_agent = request.headers.get('User-Agent')
+    return '<p>Your browser is %s</p>' % user_agent
+```
+
+注意，在这个视图函数中我们如何把`request`当作全局变量使用。事实上，`request`不可能是全局变量。试想，在多线程服务器中，多个线程同时处理不同客户端发送的不同请求时，每个线程看到的`request`对象必然不同。`Flask`使用上下文让特定的变量在一个线程中全局可访问，与此同时却不会干扰其他线程。
+
+- `current_app`：
+  - 程序上下文——当前激活程序的程序实例
+- `g`：
+  - 程序上下文——处理请求时用作临时存储的对象，每次请求都会重设这个变量
+- `request`：
+  - 请求上下文——请求对象，封装了客户端发出的HTTP请求中的内容
+- `session`：
+  - 请求上下文——用户会话，用于存储请求之间需要“记住”的值的词典
+
+
+
+Cookies:
+
+你可以通过`cookies`属性来访问Cookies，用响应对象的`set_cookie`方法来设置Cookies。请求对象的`cookies`属性是一个内容为客户端提交的所有Cookies的字典
+
+```python
+from flask import request
+
+@app.route('/')
+def index():
+    username = request.cookies.get('username')
+    # 用cookies.get(key)的方式替代cookies[key]获取cookie，可以避免在cookie没有值的时候发生KeyError
+    
+from flask import make_response
+
+@app.route('/')
+def index():
+    resp = make_response(render_template(...))
+    resp.set_cookie('username', 'the username')
+    return resp
+```
+
+
+
+重定向和错误:
+
+你可以用`redirect()`函数把用户重定向到其他地方。放弃请求并返回错误代码，用`abort()`函数
+
+```python
+from flask import abort, redirect, url_for
+
+@app.route('/')
+def index():
+    return redirect(url_for('login'))
+
+@app.route('/login')
+def login():
+    abort(401)
+    this_is_never_excuted()
+```
+
+
+
+错误处理:
+
+默认情况下，错误代码会显示一个黑白的错误页面。如果你要定制错误页面，可以使用`errorhandler()`装饰器
+
+```python
+from flask import render_template
+
+@app.errorhandler(404)
+def page_not_found(error):
+    return render_template('page_not_found.html'), 404
+```
+
+
+
+响应对象:
+
+视图函数的返回值会被自动转换为一个响应对象。如果返回值是一个字符串，它被转换为该字符串为主体的、状态码为`200 OK`的、MIME类型是`text/html`的响应对象
+
+`Flask`处理响应对象的方法是
+
+- 如果返回的是一个合法的响应对象，它会从视图直接返回
+- 如果返回的是一个字符串，响应对象会用字符串数据和默认参数创建
+- 如果返回的是一个元组，则元组中的元素可以提供额外的信息
+
+```python
+# 返回元组
+@app.errorhandler(404)
+def not_found(error):
+    return render_template('error.html'), 404
+
+# 返回响应对象
+@app.errorhandler(404)
+def not_found(error):
+    resp = make_response(render_template('error.html'), 404)
+    resp.headers['X-Something'] = 'A value'
+    return resp
+```
+
+
+
+Sessions:
+
+`session`对象允许你在不同请求间存储特定用户的信息。它是在Cookies的基础上实现的，并且对Cookies进行密钥签名。这意味着用户可以查看你的Cookies内容，但却不能修改它，除非用户知道签名的密钥。
+
+要使用会话，你需要设置一个密钥
+
+```python
+# 使用session
+from flask import Flask, session, redirect, url_for, escape, request
+
+app = Flask(__name__)
+
+@app.route('/')
+def index():
+    if 'username' in session:
+        return 'Logged in as %s' % escape(session['username'])
+    return 'You are not logged in'
+
+# session管理
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        session['username'] = request.form['username']
+        return redirect(url_for('index'))
+    return """xxx"""
+
+@app.route('logout')
+def logout():
+    session.pop('username', None)
+    return redirect(url_for('index'))
+app.secret_key = 'miyue'
+```
+
+
+
+消息闪现:
+
+```python
+from flask import Flask, flash...
+```
+
+
+
+日志记录:
+
+从Flask 0.3开始，Flask就已经预置了日志系统
+
+```python
+app.logger.debug('A value for debugging')
+app.logger.warning('A warning occurred (%d apples)', 42)
+app.logger.error('An error occurred')
+```
+
+
+
+命令行工具:
+
+直接执行`flask --help`查看输出
+
+Flask从0.11开始提供了命令行工具，不再需要`Flask-script`扩展
+
+```python
+@app.cli.command('initdb')
+def initdb_command():
+    """Creates the database tables."""
+    init_db()
+    print('Initialized the database.')
+```
+
+
+
+# 深入浅出Jinja2
+
+## 模版渲染
+
+为什么需要模版：
+
+- 把业务逻辑和页面逻辑混在一起会导致代码难以理解和维护
+- 假设要为一个大型表格构建HTML代码，表格中的数据由数据库中读取的数据以及必要的HTML字符串连接在一起。在代码中拼接HTML简直是噩梦，并且，给维护代码的人极大的心理负担
+- 把页面逻辑移到模版中能够提升程序的可维护性
+- 模版是一个包含响应文本的文件，其中包含用占位变量表示的动态部分，其具体值只在请求的上下文中才能知道。**使用真实值替换变量，再返回最终得到的响应字符串，这一过程称为渲染**
+
+
+
+在Flask中使用Jinja2:
+
+- 可以使用Flask提供的`render_template`函数来渲染模版
+- 我们要做的就是将模版名和想作为关键字的参数传入模版的变量
+- `render_template`函数的第一个参数是模版的文件名，随后的参数都是键值对，表示模版中变量对应的真实值
+
+```python
+from flask import render_template
+
+@app.route('/hello/<name>')
+def hello(name=None):
+    return render_template('hello.html', name=name)
+```
+
+- Flask会自动在`templates`文件夹里寻找模版
+- 需要做的一切就是将模版名和你想作为关键字的参数传入模版的变量
+
+```shell
+/application.py
+/templates
+	/hello.html
+```
+
+```html
+<!doctype html>
+<title>Hello from Flask</title>
+{% if name %}
+  <h1>Hello {{ name }}!</h1>
+{% else %}
+  <h1>Hello World!</h1>
+{% endif %}
+```
+
+
+
+Flask使用Jinja2总结:
+
+- Flask集成了Jinja2模版引擎
+- Flask默认使用Jinja2模版引擎（也可以很方便的使用其他引擎，如Mako）
+- Flask集成Jinja2的方式
+  - 提供了`render_template`函数
+  - 默认在templates文件夹下寻找模版
+
+
+
+Jinja2入门:
+
+- 模版仅仅是文本文件，它并没有特定的扩展名，`.html`或`.xml`都是可以的
+- 模版包含HTML标签、控制结构、变量和表达式
+- 对于Python的Web开发来说，Jinja2就是简单的Python + HTML
+
+
+
+Jinja2的语句:
+
+```jinja2
+{% %}  # 控制结构
+{{ }}  # 变量取值
+{# #}  # 注释
+
+{# note: disabled template because we no longer use this
+	{% for user in users %}
+		...
+	{% endfor %}
+#}
+```
+
+
+
+Jinja2中的变量:
+
+模版中使用的{{ }}结构表示一个变量，它是一种特殊的占位符，告诉模版引擎这个位置的值从渲染模版时使用的数据中获取
+
+Jinja2能识别所有类型的变量，甚至是一些复杂的类型，例如列表、字典和对象
+
+```html
+<p>A value from a dictionary: {{ mydict['key'] }}.</p>
+<p>A value from a list: {{ mylist[3] }}.</p>
+<p>A value from a list, with a vraible index: {{ mylist[myintvar] }}.</p>
+<p>A value from an object's method: {{ myobj.somemethod() }}.</p>
+```
+
+
+
+Jinja2中的过滤器:
+
+变量可以通过“过滤器”修改，过滤器与变量用管道(|)分割
+
+多个过滤器可以链式调用，前一个过滤器的输出会被作为后一个过滤器的输入
+
+过滤器可以理解为Jinja2里面的内置函数和字符串处理函数
+
+| 过滤器名       | 说明                    |
+| ---------- | --------------------- |
+| safe       | 渲染值时不转义               |
+| capitalize | 把值的首字母转换成大写，其他字母转换成小写 |
+| lower      | 把值转换成小写形式             |
+| upper      | 把值转换成大写形式             |
+| title      | 把值中每个单词的首字母都转换成大写     |
+| trim       | 把值的首尾空格去掉             |
+| striptags  | 渲染之前把值中所有的HTML标签都删掉   |
+
+
+
+Jinja2的if 控制结构:
+
+Jinja2中if 语句可类比Python中的if语句。在最简单的形式中，你可以测试一个变量是否未定义，为空或false
+
+像在Python中一样，用`elif`和`else`来构建多个分支
+
+```jinja2
+{% if users %}
+<ul>
+{% for user in users %}
+<li>{{ user.username|e }}</li>
+{% endfor %}
+</ul>
+{% endif %}
+
+{% if kenny.sick %}
+	Kenny is sick.
+{% elif kenny.dead %}
+	You killed Kenny.You bastard
+{% else %}
+	Kenny looks ok --- so far
+{% endif %}
+```
+
+
+
+Jinja2的for控制结构:
+
+```jinja2
+# 遍历序列中的每项
+<h1>Members</h1>
+<ul>
+{% for user in users %}
+  <li>{{ user.username |e }}</li>
+{% endfor %}
+</ul>
+
+# 迭代dict
+<dl>
+{% for key, value in d.iteritems() %}
+	<dt>{{ key|e }}</dt>
+	<dd>{{ value|e }}</dd>
+{% endfor %}
+</dl>
+```
+
+Jinja2还提供了一些特殊变量，方便使用
+
+| 变量             | 描述                 |
+| -------------- | ------------------ |
+| loop.index     | 当前循环迭代的次数（从1开始）    |
+| loop.index0    | 当前循环迭代的次数（从0开始）    |
+| loop.revindex  | 到循环结束需要迭代的次数（从1开始） |
+| loop.revindex0 | 到循环结束需要迭代的次数（从0开始） |
+| loop.firse     | 如果是第一次迭代，为True     |
+| loop.last      | 如果是最后一次迭代，为True    |
+| loop.length    | 序列中的项目数            |
+| loop.cycle     | 在一串序列              |
+
+```jinja2
+{% for todo in todo_list %}
+   <tr class="info">
+      <td>{{ loop.index }}</td>
+      <td>{{ todo['title'] }}</td>
+      <td>{{ todo['status'] }}</td>
+      <td>{{ todo['create_time'] }}</td>
+   </tr>
+{% endfor %}
+```
+
+
+
+Jinja2的宏控制结构:
+
+```jinja2
+# 定义
+<!-- 定义宏，类似于函数 -->
+{% macro hello(name) %}
+    Hello {{ name }}
+{% endmacro %}
+
+# 使用
+<!-- 使用宏 -->
+{% import 'macro.html as macro %}
+<p>{{ macro.hello('world') }}</p>
+```
 
 
 
