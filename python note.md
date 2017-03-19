@@ -46,7 +46,7 @@ print a # Prints [ 1, -2, -3, -4, 4, 5 ]
 字符串格式化，推荐使用`format`函数，少用`%`。若一个格式多次出现，可先定义一个格式，之后调用`format`方法达到复用的目的
 
 ```python
-f = "result(0)"
+f = "result{0}"
 
 f.format(1)
 f.format("one")
